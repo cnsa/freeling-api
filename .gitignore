@@ -1,0 +1,6 @@
+*.dylib
+*.jar
+*.cxx
+*.so
+*.class
+/APIs/java/edu
