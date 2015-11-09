@@ -3,21 +3,10 @@
 # Alternatively, you can call 'make' overriding variable values, E.g.:
 #     make FREELINGDIR=/my/freeling/dir SWIGDIR=/my/swig/dir JAVADIR=/my/java/dir
 
-ifndef FREELING_OUT
-	FREELING_OUT = /usr/local/lib/freeling
-endif
-
-ifndef FREELINGDIR
-	FREELINGDIR = /usr/local
-endif
-
-ifndef SWIGDIR
-	SWIGDIR = /usr/share/swig2.0
-endif
-
-ifndef JAVADIR
-	JAVADIR = /usr/lib/jvm/java
-endif
+FREELING_OUT ?= /usr/local/lib/freeling
+FREELINGDIR ?= /usr/local
+SWIGDIR ?= /usr/share/swig2.0
+JAVADIR ?= /usr/lib/jvm/java
 
 # you may change the package name if you want
 PACKAGE = edu/upc/freeling
