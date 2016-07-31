@@ -65,13 +65,12 @@ sub Freeling_CreateAnalyzers {
   $loc{"dicc"} = &loc_cfg_file("dicc.src");
   $loc{"np"} = &loc_cfg_file("np.dat");
   $loc{"punct"} = &loc_cfg_file("common/punct.dat");
-  $loc{"corrector"} = &loc_cfg_file("corrector/corrector.dat");
   $loc{"tokenizer"} = &loc_cfg_file("tokenizer.dat");
   $loc{"splitter"} = &loc_cfg_file("splitter.dat");
   $loc{"tagger"} = &loc_cfg_file("tagger.dat");
   $loc{"grammar-chunk"} = &loc_cfg_file("chunker/grammar-chunk.dat");
   $loc{"constr_gram"} = &loc_cfg_file("constr_gram-B.dat");
-  $loc{"dependences"} = &loc_cfg_file("dep/dependences.dat");
+  $loc{"dependences"} = &loc_cfg_file("dep_txala/dependences.dat");
 
   # uncomment to trace FreeLing (if it was compiled with --enable-traces)
   #$freeling::traces::TraceLevel=4;
@@ -82,32 +81,25 @@ sub Freeling_CreateAnalyzers {
   # create options set for maco analyzer. Default values are Ok, except for data files.
   my $op=new freeling::maco_options("es");
 
-  $op->set_active_modules(0,   # UserMap
-			  1,   # AffixAnalysis
-			  1,   # MultiwordsDetection
-			  1,   # NumbersDetection
-			  1,   # PunctuationDetection
-			  1,   # DatesDetection
-			  1,   # QuantitiesDetection
-			  1,   # DictionarySearch
-			  1,   # ProbabilityAssignment
-			  1,   # NE Recognition
-			  0);  # OrthographicCorrection
-
   $op->set_data_files("",                                        # UserMapFile
-		      $loc{"locucions"},                         # LocutionsFile
-		      $loc{"quantities"},			 # QuantitiesFile
-		      $loc{"afixos"},				 # AffixFile
-		      $loc{"probabilitats"},			 # ProbabilityFile
-		      $loc{"dicc"},				 # DictionaryFile
-		      $loc{"np"},				 # NPDataFile
 		      $loc{"punct"},				 # PunctuationFile
-		      $loc{"corrector"});			 # CorrectorFile
+		      $loc{"dicc"},				 # DictionaryFile
+		      $loc{"afixos"},				 # AffixFile
+                      "",
+		      $loc{"locucions"},                         # LocutionsFile
+		      $loc{"np"},				 # NPDataFile
+		      $loc{"quantities"},			 # QuantitiesFile
+		      $loc{"probabilitats"}			 # ProbabilityFile
+                     );
 
   # create analyzers
   $tk = new freeling::tokenizer($loc{"tokenizer"});
   $sp = new freeling::splitter($loc{"splitter"});
   $morfo = new freeling::maco($op);
+  $morfo->set_active_options(0, 1, 1, 1,   # select which among created 
+                             1, 1, 0, 1,   # submodules are to be used. 
+                             1, 1, 1, 1);  # default: all created submodules are used
+
 
   ## exchange comments in two following lines to change the tagger type used
   $tagger = new freeling::hmm_tagger($loc{"tagger"},1,2);
@@ -479,13 +471,15 @@ sub process_doc {
 
   my ($doc, $ctrl) = @_;
 
+  my $sid = $sp->open_session();
+
   foreach my $par (split(/\n/, $doc)) {
     $ctrl->{'para_n'}++;
     #my $ls = Freeling_AnalyzeSentence($_);
 
     ## read input text and analyze it.
     my $l = $tk->tokenize($par);    # tokenize
-    my $ls = $sp->split($l,0);	    # split sentences
+    my $ls = $sp->split($sid,$l,0);	    # split sentences
     $ls = $morfo->analyze($ls);     # morphological analysis
     $ls = $tagger->analyze($ls);    # PoS tagging
 
@@ -513,6 +507,8 @@ sub process_doc {
       &add_deps($sent->get_dep_tree()->begin(), "", $ctrl);
     }
   }
+
+  $sp->close_session($sid);
 }
 
 sub main {

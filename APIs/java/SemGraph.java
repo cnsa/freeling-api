@@ -4,11 +4,11 @@ import java.io.IOException;
 
 import edu.upc.freeling.*;
 
-public class Analyzer {
+public class SemGraph {
   // Modify this line to be your FreeLing installation directory
   private static final String FREELINGDIR = "/usr/local";
   private static final String DATA = FREELINGDIR + "/share/freeling/";
-  private static final String LANG = "es";
+  private static final String LANG = "en";
 
   public static void main( String argv[] ) throws IOException {
     System.loadLibrary( "freeling_javaAPI" );
@@ -31,13 +31,8 @@ public class Analyzer {
 
     // Create analyzers.
 
-    // language detector. Used just to show it. Results are printed  but ignored. 
-    // See below.
-    LangIdent lgid = new LangIdent(DATA + "/common/lang_ident/ident.dat");
-
     Tokenizer tk = new Tokenizer( DATA + LANG + "/tokenizer.dat" );
     Splitter sp = new Splitter( DATA + LANG + "/splitter.dat" );
-    SWIGTYPE_p_splitter_status sid = sp.openSession();
 
     Maco mf = new Maco( op );
     mf.setActiveOptions(false, true, true, true,  // select which among created 
@@ -46,61 +41,122 @@ public class Analyzer {
                                                   // are used
 
     HmmTagger tg = new HmmTagger( DATA + LANG + "/tagger.dat", true, 2 );
-    ChartParser parser = new ChartParser(
-      DATA + LANG + "/chunker/grammar-chunk.dat" );
-    DepTxala dep = new DepTxala( DATA + LANG + "/dep_txala/dependences.dat",
-      parser.getStartSymbol() );
+    ChartParser chunker = new ChartParser(DATA + LANG + "/chunker/grammar-chunk.dat" );
+    DepTxala parser = new DepTxala( DATA + LANG + "/dep_txala/dependences.dat", 
+				    chunker.getStartSymbol() );
+    DepTreeler depsrl = new DepTreeler( DATA + LANG + "/dep_treeler/dependences.dat");    
     Nec neclass = new Nec( DATA + LANG + "/nerc/nec/nec-ab-poor1.dat" );
 
     Senses sen = new Senses(DATA + LANG + "/senses.dat" ); // sense dictionary
     Ukb dis = new Ukb( DATA + LANG + "/ukb.dat" ); // sense disambiguator
 
+    Relaxcor corf = new Relaxcor(DATA + LANG + "/coref/relaxcor/relaxcor.dat");
+    SemgraphExtract sge = new SemgraphExtract(DATA + LANG + "/semgraph/semgraph-SRL.dat");
+
     // Make sure the encoding matches your input text (utf-8, iso-8859-15, ...)
-    BufferedReader input = new BufferedReader(
-      new InputStreamReader( System.in, "utf-8" ) );
+    String text = "";
+    BufferedReader input = new BufferedReader(new InputStreamReader( System.in, "utf-8" ) );
     String line = input.readLine();
-
-    // Identify language of the text.  
-    // Note that this will identify the language, but will NOT adapt
-    // the analyzers to the detected language.  All the processing 
-    // in the loop below is done by modules for LANG (set to "es" at
-    // the beggining of this class) created above.
-    String lg = lgid.identifyLanguage(line);
-    System.out.println( "-------- LANG_IDENT results -----------" );
-    System.out.println("Language detected (from first line in text): " + lg);
-
     while( line != null ) {
-      // Extract the tokens from the line of text.
-      ListWord l = tk.tokenize( line );
-
-      // Split the tokens into distinct sentences.
-      ListSentence ls = sp.split( sid, l, false );
-
-      // Perform morphological analysis
-      mf.analyze( ls );
-
-      // Perform part-of-speech tagging.
-      tg.analyze( ls );
-
-      // Perform named entity (NE) classificiation.
-      neclass.analyze( ls );
-
-      sen.analyze( ls );
-      dis.analyze( ls );
-      printResults( ls, "tagged" );
-
-      // Chunk parser
-      parser.analyze( ls );
-      printResults( ls, "parsed" );
-
-      // Dependency parser
-      dep.analyze( ls );
-      printResults( ls, "dep" );
-
+      text = text + line + "\n";
       line = input.readLine();
     }
+    
+    // tokenize and split text
+    ListWord l = tk.tokenize( text );
+    ListSentence ls = sp.split(l);
+    // copy sentences into a paragraph
+    Document doc = new Document();
+    doc.pushBack(new Paragraph(ls));
+    
+    // Perform morphological analysis
+    mf.analyze(doc);
+    // Perform part-of-speech tagging.
+    tg.analyze(doc);
+    printResults(doc, "tagger" );
+    
+    // Perform named entity (NE) classificiation.
+    neclass.analyze(doc);
+    
+    // disambiguate senses
+    sen.analyze(doc);
+    dis.analyze(doc);
+    
+    // Chunk parser
+    chunker.analyze(doc);
+    printResults(doc, "parsed" );
 
-    sp.closeSession(sid);
+    parser.completeParseTree(doc);
+    
+    // Dependency parser and SRL
+    depsrl.analyze(doc);
+    printResults(doc, "dep" );
+
+    // extract semgraph
+    sge.extract(doc);
+
+    printResults(doc, "semgraph" );
+  }
+    
+
+  private static void printResults( Document doc, String format ) {
+
+    if (format == "tagger" ) {
+      System.out.println();
+      System.out.println( "-------- TAGGER results -----------" );
+
+      // get the analyzed words out of ls.
+      ListParagraphIterator pIt = new ListParagraphIterator(doc);
+      while (pIt.hasNext()) {
+	  ListSentenceIterator sIt = new ListSentenceIterator(pIt.next());
+	  while (sIt.hasNext()) {
+	      Sentence s = sIt.next();
+	      ListWordIterator wIt = new ListWordIterator(s);
+	      while (wIt.hasNext()) {
+		  Word w = wIt.next();
+		  
+		  System.out.print(w.getForm() + " " + w.getLemma() + " " + w.getTag() );
+		  printSenses( w );
+		  System.out.println();
+	      }
+	      
+	      System.out.println();
+	  }
+      }
+    }
+    else if (format == "parsed") {
+      System.out.println();
+      System.out.println( "-------- CHUNKER results -----------" );
+
+      ListParagraphIterator pIt = new ListParagraphIterator(doc);
+      while (pIt.hasNext()) {
+	  ListSentenceIterator sIt = new ListSentenceIterator(pIt.next());
+	  while (sIt.hasNext()) {
+	      Sentence s = sIt.next();
+	      ParseTree tree = s.getParseTree();
+	      printParseTree( 0, tree );
+	  }
+      }
+    }
+    else if (format == "dep") {
+      System.out.println();
+      System.out.println( "-------- DEPENDENCY PARSER results -----------" );
+
+      ListParagraphIterator pIt = new ListParagraphIterator(doc);
+      while (pIt.hasNext()) {
+	  ListSentenceIterator sIt = new ListSentenceIterator(pIt.next());
+	  while (sIt.hasNext()) {
+	      Sentence s = sIt.next();
+	      DepTree tree = s.getDepTree();
+	      printDepTree( 0, tree);
+	  }
+      }
+    }
+    else if (format == "semgraph" ) {
+	System.out.println();
+	System.out.println( "-------- SEMANTIC GRAPH results -----------" );
+	PrintSemanticGraph(doc);
+    }
   }
 
   private static void printSenses( Word w ) {
@@ -114,51 +170,6 @@ public class Analyzer {
     //
     // Here, we just output it:
     System.out.print( " " + ss );
-  }
-
-  private static void printResults( ListSentence ls, String format ) {
-
-    if (format == "parsed") {
-      System.out.println( "-------- CHUNKER results -----------" );
-
-      ListSentenceIterator sIt = new ListSentenceIterator(ls);
-      while (sIt.hasNext()) {
-	Sentence s = sIt.next();
-        ParseTree tree = s.getParseTree();
-        printParseTree( 0, tree );
-      }
-    }
-    else if (format == "dep") {
-      System.out.println( "-------- DEPENDENCY PARSER results -----------" );
-
-      ListSentenceIterator sIt = new ListSentenceIterator(ls);
-      while (sIt.hasNext()) {
-	Sentence s = sIt.next();
-        DepTree tree = s.getDepTree();
-        printDepTree( 0, tree);
-      }
-    }
-    else
-    {
-      System.out.println( "-------- TAGGER results -----------" );
-
-      // get the analyzed words out of ls.
-      ListSentenceIterator sIt = new ListSentenceIterator(ls);
-      while (sIt.hasNext()) {
-        Sentence s = sIt.next();
-        ListWordIterator wIt = new ListWordIterator(s);
-        while (wIt.hasNext()) {
-          Word w = wIt.next();
-
-          System.out.print(
-            w.getForm() + " " + w.getLemma() + " " + w.getTag() );
-          printSenses( w );
-          System.out.println();
-        }
-
-        System.out.println();
-      }
-    }
   }
 
   private static void printParseTree( int depth, ParseTree tr ) {
@@ -288,5 +299,30 @@ public class Analyzer {
 
     System.out.println( "" );
   }
+
+
+  private static void PrintSemanticGraph( Document doc ) {
+
+     SemanticGraph sg = doc.getSemanticGraph();
+
+     VectorSGEntity ve = sg.getEntities();
+     for (int i=0; i<ve.size(); i++) {
+	 SGEntity e = ve.get(i);
+	 System.out.println("ENTITY " + e.getId() + " : " + e.getLemma());
+     }
+
+     VectorSGFrame vf = sg.getFrames();
+     for (int i=0; i<vf.size(); i++) {
+	 SGFrame f = vf.get(i);
+	 System.out.println("FRAME " + f.getId() + " : " + f.getLemma());
+	 VectorSGArgument va = f.getArguments();
+	 for (int j=0; j<va.size(); j++) {
+	     SGArgument a = va.get(j);
+	     System.out.println("     ARG " + a.getRole() + " : " + a.getEntity());	    
+	 }
+     }
+     
+  }
+
 }
 
