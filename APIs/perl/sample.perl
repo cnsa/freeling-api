@@ -14,11 +14,15 @@ my $LANG = "es";
 
 # create options set for maco analyzer. Default values are Ok, except for data files.
 my $op=new freeling::maco_options("es");
-$op->set_active_modules(0,1,1,1,1,1,1,1,1,1);
-$op->set_data_files("", $DATA.$LANG."/locucions.dat", $DATA.$LANG."/quantities.dat",
-		    $DATA.$LANG."/afixos.dat", $DATA.$LANG."/probabilitats.dat",
-		    $DATA.$LANG."/dicc.src", $DATA.$LANG."/np.dat",
-		    $DATA."common/punct.dat");
+$op->set_data_files( "", 
+                   $DATA."common/punct.dat",
+                   $DATA.$LANG."/dicc.src",
+                   $DATA.$LANG."/afixos.dat",
+                   "",
+                   $DATA.$LANG."/locucions.dat", 
+                   $DATA.$LANG."/np.dat",
+                   $DATA.$LANG."/quantities.dat",
+                   $DATA.$LANG."/probabilitats.dat");
 
 # uncomment to trace FreeLing (if it was compiled with --enable-traces)
 #$freeling::traces::TraceLevel=4;
@@ -27,7 +31,12 @@ $op->set_data_files("", $DATA.$LANG."/locucions.dat", $DATA.$LANG."/quantities.d
 # create analyzers
 my $tk=new freeling::tokenizer($DATA.$LANG."/tokenizer.dat");
 my $sp=new freeling::splitter($DATA.$LANG."/splitter.dat");
+my $sid=$sp->open_session();
 my $mf=new freeling::maco($op);
+$mf->set_active_options(0, 1, 1, 1,   # select which among created 
+                        1, 1, 0, 1,   # submodules are to be used. 
+                        1, 1, 1, 1);  # default: all created submodules 
+                                      # are used
 
 ## exchange comments in two following lines to change the tagger type used
 my $tg=new freeling::hmm_tagger($DATA.$LANG."/tagger.dat",1,2);
@@ -38,13 +47,13 @@ my $nc=new freeling::nec($DATA.$LANG."/nerc/nec/nec-ab-poor1.dat");
 # create chunker
 my $parser= new freeling::chart_parser($DATA.$LANG."/chunker/grammar-chunk.dat");
 # create dependency parser
-my $dep=new freeling::dep_txala($DATA.$LANG."/dep/dependences.dat", $parser->get_start_symbol());
+my $dep=new freeling::dep_txala($DATA.$LANG."/dep_txala/dependences.dat", $parser->get_start_symbol());
 
 ## read input text and analyze it.
 while (<STDIN>) {
   chomp;
   my $l = $tk->tokenize($_);	# tokenize
-  my $ls = $sp->split($l,0);	# split sentences
+  my $ls = $sp->split($sid,$l,0);  # split sentences
   $ls=$mf->analyze($ls);	# morphological analysis
   $ls=$tg->analyze($ls);	# PoS tagging
   $ls=$nc->analyze($ls);       # NE classification
@@ -59,6 +68,7 @@ while (<STDIN>) {
   &printDepTree($ls);
 }
 
+$sp->close_session($sid);
 
 sub printSent {
 
@@ -84,7 +94,7 @@ sub rec_printTree {
   }
   else {
     print $info->get_label() . "_[\n";
-    for (my $d = $n->sibling_begin(); $d != $n->sibling_end(); ++$d) {
+    for (my $d = $n->sibling_begin(); $d != $n->sibling_end(); $d++) {
       rec_printTree($d, $depth + 1);
     }
     print ' ' x ($depth*2);

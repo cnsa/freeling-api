@@ -16,7 +16,16 @@
 %template(ListSentence) std::list<freeling::sentence>;
 %template(ListParagraph) std::list<freeling::paragraph>;
 
+%template(VectorArgument) std::vector<freeling::argument>;
+%template(VectorPredicate) std::vector<freeling::predicate>;
+
+%template(VectorSGMention) std::vector<freeling::semgraph::SG_mention>;
+%template(VectorSGArgument) std::vector<freeling::semgraph::SG_argument>;
+%template(VectorSGEntity) std::vector<freeling::semgraph::SG_entity>;
+%template(VectorSGFrame) std::vector<freeling::semgraph::SG_frame>;
+
 #ifdef FL_API_JAVA
+%template(ListParagraphIterator) ListIterator<freeling::paragraph>;
 %template(ListSentenceIterator) ListIterator<freeling::sentence>;
 %template(ListWordIterator)     ListIterator<freeling::word>;
 #endif
@@ -34,4 +43,5 @@
 %template(VectorPairStringString) std::vector<std::pair<std::wstring,std::wstring> >;
 
 %template(PairStringInt) std::pair<std::wstring,int>;
-
+%template(PairStringDouble) std::pair<std::wstring,double>;
+%template(ListPairStringDouble) std::list<std::pair<std::wstring,double> >;

@@ -4,4 +4,6 @@
 *.so
 *.class
 /APIs/java/edu
+/APIs.old
 .envrc
+.envrc.old
