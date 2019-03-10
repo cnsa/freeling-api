@@ -28,12 +28,12 @@
 
 ////////////////////////////////////////////////////////////////
 //
-//  freeling_rubyAPI.i
-//  This is the SWIG input file, used to generate ruby APIs.
+//  freeling_pythonAPI.i
+//  This is the SWIG input file, used to generate python APIs.
 //
 ////////////////////////////////////////////////////////////////
 
-%module freeling
+%module pyfreeling
 %{
  #include "freeling.h"
  #include "freeling/io.h"
@@ -42,16 +42,11 @@
  using namespace std;
 %}
 
+
+%include std_string.i
 %include std_wstring.i
-%include std_set.i
 
-%include <typemaps/cwstring.swg>
-%include <typemaps/std_wstring.swg>
+#define FL_API_PYTHON
 
-// `SetString` is also defined in `freeling.i`, but it needs to be defined earlier, otherwise
-// SWIG will complain about `make_set_nonconst_iterator` not having been defined yet.
-%template(SetString) std::set<std::wstring>;
-
-#define FL_API_RUBY
 %include ../common/templates.i
 %include ../common/freeling.i

@@ -7,8 +7,8 @@
 ## For example:
 ##     ./sample.py <test.txt >test_out.txt
 
-import freeling
-import sys
+import pyfreeling
+import sys, os
 
 ## ------------  output a parse tree ------------
 def printTree(ptree, depth):
@@ -80,19 +80,32 @@ def printDepTree(dtree, depth):
 ## -------------    MAIN PROGRAM  ---------------
 ## ----------------------------------------------
 
-## Modify this line to be your FreeLing installation directory
-FREELINGDIR = "/usr/local";
+## Check whether we know where to find FreeLing data files
+if "FREELINGDIR" not in os.environ :
+   if sys.platform == "win32" or sys.platform == "win64" : os.environ["FREELINGDIR"] = "C:\\Program Files"
+   else : os.environ["FREELINGDIR"] = "/usr/local"
+   print("FREELINGDIR environment variable not defined, trying ", os.environ["FREELINGDIR"], file=sys.stderr)
 
-DATA = FREELINGDIR+"/share/freeling/";
-LANG="es";
+if not os.path.exists(os.environ["FREELINGDIR"]+"/share/freeling") :
+   print("Folder",os.environ["FREELINGDIR"]+"/share/freeling",
+         "not found.\nPlease set FREELINGDIR environment variable to FreeLing installation directory",
+         file=sys.stderr)
+   sys.exit(1)
 
-freeling.util_init_locale("default");
 
-# create language analyzer
-la=freeling.lang_ident(DATA+"common/lang_ident/ident.dat");
+# Location of FreeLing configuration files.
+DATA = os.environ["FREELINGDIR"]+"/share/freeling/";
+
+# Init locales
+pyfreeling.util_init_locale("default");
+
+# create language detector. Used just to show it. Results are printed
+# but ignored (after, it is assumed language is LANG)
+la=pyfreeling.lang_ident(DATA+"common/lang_ident/ident-few.dat");
 
 # create options set for maco analyzer. Default values are Ok, except for data files.
-op= freeling.maco_options("es");
+LANG="es";
+op= pyfreeling.maco_options(LANG);
 op.set_data_files( "", 
                    DATA + "common/punct.dat",
                    DATA + LANG + "/dicc.src",
@@ -104,10 +117,10 @@ op.set_data_files( "",
                    DATA + LANG + "/probabilitats.dat");
 
 # create analyzers
-tk=freeling.tokenizer(DATA+LANG+"/tokenizer.dat");
-sp=freeling.splitter(DATA+LANG+"/splitter.dat");
+tk=pyfreeling.tokenizer(DATA+LANG+"/tokenizer.dat");
+sp=pyfreeling.splitter(DATA+LANG+"/splitter.dat");
 sid=sp.open_session();
-mf=freeling.maco(op);
+mf=pyfreeling.maco(op);
 
 # activate mmorpho odules to be used in next call
 mf.set_active_options(False, True, True, True,  # select which among created 
@@ -115,15 +128,15 @@ mf.set_active_options(False, True, True, True,  # select which among created
                       True, True, True, True ); # default: all created submodules are used
 
 # create tagger, sense anotator, and parsers
-tg=freeling.hmm_tagger(DATA+LANG+"/tagger.dat",True,2);
-sen=freeling.senses(DATA+LANG+"/senses.dat");
-parser= freeling.chart_parser(DATA+LANG+"/chunker/grammar-chunk.dat");
-dep=freeling.dep_txala(DATA+LANG+"/dep_txala/dependences.dat", parser.get_start_symbol());
+tg=pyfreeling.hmm_tagger(DATA+LANG+"/tagger.dat",True,2);
+sen=pyfreeling.senses(DATA+LANG+"/senses.dat");
+parser= pyfreeling.chart_parser(DATA+LANG+"/chunker/grammar-chunk.dat");
+dep=pyfreeling.dep_txala(DATA+LANG+"/dep_txala/dependences.dat", parser.get_start_symbol());
 
 # process input text
 lin=sys.stdin.readline();
 
-print ("Text language is: "+la.identify_language(lin,["es","ca","en","it"])+"\n");
+print ("Text language is: "+la.identify_language(lin)+"\n");
 
 while (lin) :
         

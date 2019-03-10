@@ -33,7 +33,7 @@
 //
 ////////////////////////////////////////////////////////////////
 
-%module freeling
+%module pyfreeling
 %{
  #include "freeling.h"
  #include "freeling/io.h"
@@ -49,8 +49,4 @@
 #define FL_API_PYTHON
 
 %include ../common/templates.i
-
-%include std_set.i
-%template(SetString) std::set<std::wstring>;
-
 %include ../common/freeling.i

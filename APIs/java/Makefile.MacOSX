@@ -28,15 +28,15 @@ JPACKAGE = edu.upc.freeling
 # Change your compiler, if necessary.
 GCC ?= g++
 
-all: freeling_javaAPI.cxx libfreeling_javaAPI.dylib
+all: freeling_javaAPI.cxx libJfreeling.dylib
 
 .PHONY: all
 
 # Compile the C++ API
-libfreeling_javaAPI.dylib: freeling_javaAPI.cxx
-	$(GCC) -dynamiclib -o $(FREELINGOUT)/libfreeling_javaAPI.dylib freeling_javaAPI.cxx -lfreeling -I$(ICU4CDIR)/include -L$(FREELINGDIR)/lib -I$(FREELINGDIR)/include -I$(FREELINGDIR)/include/treeler $(JAVAHEADERS) $(SYSTEMHEADERS) $(SYSTEMLIBS) -fPIC -std=c++0x -lboost_system-mt
+libJfreeling.dylib: freeling_javaAPI.cxx
+	$(GCC) -dynamiclib -o $(FREELINGOUT)/libJfreeling.dylib freeling_javaAPI.cxx -lfreeling -I$(ICU4CDIR)/include -L$(FREELINGDIR)/lib -I$(FREELINGDIR)/include -I$(FREELINGDIR)/include/treeler $(JAVAHEADERS) $(SYSTEMHEADERS) $(SYSTEMLIBS) -fPIC -std=c++0x -lboost_system-mt
 	$(JAVABIN)/javac $(PACKAGE)/*.java
-	$(JAVABIN)/jar -cf $(FREELINGOUT)/freeling.jar $(PACKAGE)
+	$(JAVABIN)/jar -cf $(FREELINGOUT)/Jfreeling.jar $(PACKAGE)
 
 # Build the Java JNI wrapper classes.
 freeling_javaAPI.cxx: freeling_javaAPI.i ../common/freeling.i

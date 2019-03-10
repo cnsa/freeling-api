@@ -2,7 +2,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.IOException;
 
-import edu.upc.freeling.*;
+import edu.upc.Jfreeling.*;
 
 public class SemGraph {
   // Modify this line to be your FreeLing installation directory
@@ -11,7 +11,7 @@ public class SemGraph {
   private static final String LANG = "en";
 
   public static void main( String argv[] ) throws IOException {
-    System.loadLibrary( "freeling_javaAPI" );
+    System.loadLibrary( "Jfreeling" );
 
     Util.initLocale( "default" );
 
